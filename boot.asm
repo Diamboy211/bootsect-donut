@@ -27,6 +27,15 @@ start1:
 start2:
 	mov word [fs:bx], 65535
 	call get_color
+	mov si, dx
+	and si, 1
+	add si, si
+	mov di, cx
+	and di, 1
+	sub si, di
+	and si, 3
+	add ax, si
+
 	mov [fs:bx], al
 	inc bx
 	inc dx
@@ -87,7 +96,7 @@ get_color:
 	fst qword [0x1028]
 	fst qword [0x1020]
 
-	mov ax, 20
+	mov ax, 32
 get_color0:
 	call sdf
 	faddp
@@ -104,10 +113,9 @@ get_color0:
 	dec ax
 	jnz get_color0
 
-	fmul st0, st0
 	fld1
 	fdivrp
-	fimul word [i63]
+	fimul word [i252]
 	fistp word [bx]
 	mov al, [bx]
 
@@ -117,8 +125,8 @@ get_color0:
 	ret
 i100:
 dw 100
-i63:
-dw 63
+i252:
+dw 252
 
 c2 equ 0x1038
 f_0 equ 0x1040
@@ -139,7 +147,8 @@ calc_angles:
 	fild word [bx-0x38]
 	fidiv word [i256]
 	fld st0
-	fadd st0, st0
+	fldln2
+	fmulp
 	fsincos
 	fstp qword [bx] ; c2
 	fstp qword [bx+16] ; s2
@@ -186,6 +195,15 @@ sdf0:
 	fmul qword [si+16]
 	faddp
 	faddp
+
+	fld st0
+	fldpi
+	fdivp
+	frndint
+	fldpi
+	fmulp
+	fsubp
+
 	fmul st0, st0
 	add si, 24
 	dec cx
@@ -195,7 +213,7 @@ sdf0:
 	fxch st2 ; [x^2, z^2, y^2]
 	faddp
 	fsqrt
-	fld1
+	fld dword [f_1_2]
 	fsubp
 	fmul st0, st0
 	faddp
@@ -204,19 +222,22 @@ sdf0:
 	ret
 f_9_4:	dd 2.25
 f_1_4:	dd 0.25
+f_1_2:	dd 0.5
 
 set_video:
 	mov ax, 0x0013
 	int 0x10
 	mov dx, 0x3C8
-	xor al, al
+	xor ax, ax
 	out dx, al
 	inc dx
 set_video1:
 	out dx, al
 	out dx, al
 	out dx, al
-	inc al
+	mov al, ah
+	shr al, 2
+	inc ah
 	jnz set_video1
 
 	ret
